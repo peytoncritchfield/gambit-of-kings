@@ -7,7 +7,7 @@
       v-for="(space, index) in boardSpaces" 
       v-bind:key="index"
       v-bind:class="{spaces2: !boardSpaces[index].color}"
-      v-on:click="moveStart(index)">
+      v-on:click="move(index)">
 
         <img :src="imageSrc[index]" width="40" height="40"/>
 
@@ -40,24 +40,50 @@ export default {
                         'knight', 'lion', 'griffin',
                        'giant', 'light-castle', 'paladin', 'giant',
                        'griffin', 'lion', 'knight'],
-      moveActivated: false
+      moveFromMoveTo: [],
+      lightsMove: true,
     }
   },
   methods: {
     createBoard() {
       for(let j = 0; j < 10; j++){
         for(let i = 0; i < 10; i++) {
+
           let spaces = {
-            x: `${i + 1}`,
-            y: `${j + 1}`,
+            x: i,
+            y: j,
             index: i + 10 * j
           }
+
+          if (j === 0) {
+            spaces.piece = this.darkPieceSetUp[i]
+          } else if (j === 1) {
+            spaces.piece = this.darkPieceSetUp[i + 10]
+          } else if (j > 1 && j < 8) {
+            spaces.piece = 'empty'
+          } else if (j === 8) {
+            spaces.piece = this.lightPieceSetUp[i]
+          } else if (j === 9) {
+            spaces.piece = this.lightPieceSetUp[i + 10]
+          }
+
+
+          if (j < 3) {
+            spaces.team = 'dark'
+            spaces.turn = false
+          } else if (j > 7) {
+            spaces.team = 'light'
+            spaces.turn = true
+
+          }
+
           if ((i - j) % 2 === 0 || (j - i) % 2 === 0)
           {
             spaces.color = true
           } else {
             spaces.color = false
           }
+
           this.boardSpaces.push(spaces)
         }
       }
@@ -74,12 +100,46 @@ export default {
         this.imageSrc.splice(i + 80, 1, require(`./assets/light/${this.lightPieceSetUp[i]}.png`))
       }
     },
-    moveStart(index) {
-      this.moveActivated = !this.moveActivated
-      const spaceSelected = this.boardSpaces.find((child) => child.index === index)
-      console.log(spaceSelected)
-      if(this.moveActivated === true){
-        console.log('ready to move')
+    move(index) {
+      let movePhase = this.moveFromMoveTo.length
+      this.moveFromMoveTo.push(index)
+      let original = this.moveFromMoveTo[0]
+      let next = this.moveFromMoveTo[1]
+      
+
+      if(
+        movePhase === 1 
+        && this.boardSpaces[original].piece !== 'light-castle'
+        && this.boardSpaces[original].piece !== 'dark-castle')
+      {
+        if (this.boardSpaces[original].piece !== 'empty') {
+          if (this.boardSpaces[original].turn === true) {
+            this.imageSrc.splice(original, 1, require('./assets/blank.png'))
+            this.imageSrc.splice(next, 1, require(`./assets/${this.boardSpaces[original].team}/${this.boardSpaces[original].piece}.png`))
+            this.boardSpaces[next].piece = this.boardSpaces[original].piece
+            this.boardSpaces[next].team = this.boardSpaces[original].team
+            this.boardSpaces[next].turn = this.boardSpaces[original].turn
+            this.boardSpaces[original].piece = this.boardSpaces[next].piece
+            for(let i = 0; i < 100; i++) {
+              if(this.boardSpaces[i].team === 'dark') {
+                this.boardSpaces[i].turn = !this.boardSpaces[i].turn
+              } else if (this.boardSpaces[i].team === 'light') {
+                this.boardSpaces[i].turn = !this.boardSpaces[i].turn
+              }
+            }
+          }
+        }
+
+        this.moveFromMoveTo = []
+        if(this.boardSpaces[5].turn === true) {
+          console.log('Dark\'s Turn')
+        } else {
+          console.log('Light\'s Turn')
+        }
+      } else if (movePhase === 1) {
+        alert("Illegal Move")
+        this.moveFromMoveTo = []
+
       }
     }
   },
@@ -87,7 +147,6 @@ export default {
   created() {
     this.createBoard()
     this.createPieces()
-    console.log(this.boardSpaces)
   }
 }
 </script>
@@ -95,7 +154,7 @@ export default {
 <style>
 body {
   margin: 0;
-  background-color: rgb(252, 252, 252);
+  background-color: rgb(5, 5, 5);
 }
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
@@ -129,6 +188,6 @@ body {
   align-items: center;
 }
 .spaces2 {
-  background-color: rgba(128, 127, 127, 0.5);
+  background-color: rgba(128, 127, 127, 0.712);
 }
 </style>
