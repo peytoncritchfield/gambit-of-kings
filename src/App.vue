@@ -9,7 +9,9 @@
       v-bind:class="{spaces2: !boardSpaces[index].color}"
       v-on:click="move(index)">
 
-        <img :src="imageSrc[index]" width="40" height="40"/>
+        {{boardSpaces[index].index}}
+
+        <img :src="imageSrc[index]" width="35" height="40"/>
 
       </div>
 
@@ -42,6 +44,11 @@ export default {
                        'griffin', 'lion', 'knight'],
       moveFromMoveTo: [],
       lightsMove: true,
+      availableMoves: [],
+      directions: [
+        {moveX: 1, moveY: -1}, {moveX: 1, moveY: 0}, {moveX: 1, moveY: 1}, 
+        {moveX: 0, moveY: 1}, {moveX: -1, moveY: 1}, {moveX: -1, moveY: 0}, 
+        {moveX: -1, moveY: -1}, {moveX: 0, moveY: -1}]
     }
   },
   methods: {
@@ -61,6 +68,8 @@ export default {
             spaces.piece = this.darkPieceSetUp[i + 10]
           } else if (j > 1 && j < 8) {
             spaces.piece = 'empty'
+            spaces.team = 'none'
+            
           } else if (j === 8) {
             spaces.piece = this.lightPieceSetUp[i]
           } else if (j === 9) {
@@ -68,7 +77,7 @@ export default {
           }
 
 
-          if (j < 3) {
+          if (j < 2) {
             spaces.team = 'dark'
             spaces.turn = false
           } else if (j > 7) {
@@ -105,6 +114,13 @@ export default {
       this.moveFromMoveTo.push(index)
       let original = this.moveFromMoveTo[0]
       let next = this.moveFromMoveTo[1]
+
+      
+
+
+      if (movePhase === 0) {
+        this.prepareAvailableMoves(index)
+      }
       
 
       if(
@@ -114,22 +130,33 @@ export default {
       {
         if (this.boardSpaces[original].piece !== 'empty') {
           if (this.boardSpaces[original].turn === true) {
-            this.imageSrc.splice(original, 1, require('./assets/blank.png'))
-            this.imageSrc.splice(next, 1, require(`./assets/${this.boardSpaces[original].team}/${this.boardSpaces[original].piece}.png`))
-            this.boardSpaces[next].piece = this.boardSpaces[original].piece
-            this.boardSpaces[next].team = this.boardSpaces[original].team
-            this.boardSpaces[next].turn = this.boardSpaces[original].turn
-            this.boardSpaces[original].piece = this.boardSpaces[next].piece
-            for(let i = 0; i < 100; i++) {
-              if(this.boardSpaces[i].team === 'dark') {
-                this.boardSpaces[i].turn = !this.boardSpaces[i].turn
-              } else if (this.boardSpaces[i].team === 'light') {
-                this.boardSpaces[i].turn = !this.boardSpaces[i].turn
+
+            for(let i = 0; i < this.availableMoves.length; i++) {
+              if (this.boardSpaces[next].index === this.availableMoves[i]) {
+                
+                this.imageSrc.splice(original, 1, require('./assets/blank.png'))
+                this.imageSrc.splice(next, 1, require(`./assets/${this.boardSpaces[original].team}/${this.boardSpaces[original].piece}.png`))
+               
+    
+                this.boardSpaces[next].piece = this.boardSpaces[original].piece
+                this.boardSpaces[next].team = this.boardSpaces[original].team
+                this.boardSpaces[original].team = 'none'
+                this.boardSpaces[next].turn = this.boardSpaces[original].turn
+                this.boardSpaces[original].turn = 'null'
+                this.boardSpaces[original].piece = 'empty'
+    
+                for(let i = 0; i < 100; i++) {
+                  if(this.boardSpaces[i].team === 'dark') {
+                    this.boardSpaces[i].turn = !this.boardSpaces[i].turn
+                  } else if (this.boardSpaces[i].team === 'light') {
+                    this.boardSpaces[i].turn = !this.boardSpaces[i].turn
+                  }
+                } 
               }
             }
           }
         }
-
+        this.availableMoves = []
         this.moveFromMoveTo = []
         if(this.boardSpaces[5].turn === true) {
           console.log('Dark\'s Turn')
@@ -141,6 +168,71 @@ export default {
         this.moveFromMoveTo = []
 
       }
+    },
+    prepareAvailableMoves(index) {
+
+      let original = this.boardSpaces[index]
+      let opX = original.x
+      let opY = original.y
+      let pieceStats = {}
+
+      if (original.piece === 'elf' || original.piece === 'orc') {
+        pieceStats.distance = 2
+        pieceStats.directions = [
+          this.directions[0], this.directions[2], 
+          this.directions[4], this.directions[6]
+        ]
+      } else if (original.piece === 'knight' || original.piece === 'death-knight') {
+        pieceStats.distance = 3
+        pieceStats.directions = [
+          this.directions[0], this.directions[1], 
+          this.directions[2], this.directions[3],
+          this.directions[4], this.directions[5], 
+          this.directions[6], this.directions[7]
+        ]
+      } else if (original.piece === 'giant') {
+        pieceStats.distance = 3
+        pieceStats.directions = [
+          this.directions[0], this.directions[1], this.directions[5], 
+          this.directions[6], this.directions[7]
+        ]
+      } else if (original.piece === 'ogre') {
+        pieceStats.distance = 3
+        pieceStats.directions = [
+          this.directions[1], this.directions[2], this.directions[3], 
+          this.directions[4], this.directions[5]
+        ]
+      } else if (original.piece === 'paladin' || original.piece === 'lich') {
+        pieceStats.distance = 9
+        pieceStats.directions = [
+          this.directions[0], this.directions[1], 
+          this.directions[2], this.directions[3],
+          this.directions[4], this.directions[5], 
+          this.directions[6], this.directions[7]
+        ]
+      }
+
+      for (let i = 0; i < pieceStats.directions.length; i++) {
+        for (let j = 0; j < pieceStats.distance; j++) {
+          let goX = opX + pieceStats.directions[i].moveX * (j + 1)
+          let goY = opY + pieceStats.directions[i].moveY * (j + 1)
+          let goIndex = goX + 10 * goY
+          if (goX >= 0 && goY >= 0 
+          && goX <= 9 && goY <= 9 
+          && this.boardSpaces[goIndex].team !== original.team) {
+            if (j === 0) {
+              this.availableMoves.push(goIndex)
+            } else if (j !== 0) {
+              if (this.boardSpaces[this.availableMoves[this.availableMoves.length - 1]].piece === 'empty') {
+                this.availableMoves.push(goIndex)
+              }
+            }
+          } else {
+            j += pieceStats.distance - 1
+          }
+        }
+      }
+    console.log(this.availableMoves)
     }
   },
 
@@ -176,7 +268,7 @@ body {
   max-width: 650px
 }
 .spaces1 {
-  background-color: #02779b;
+  background-color: #398399;
   display: flex;
   width: 10vw;
   height: 10vw;
@@ -188,6 +280,6 @@ body {
   align-items: center;
 }
 .spaces2 {
-  background-color: rgba(128, 127, 127, 0.712);
+  background-color: #74d9f8;
 }
 </style>
